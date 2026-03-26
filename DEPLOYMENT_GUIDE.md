@@ -68,9 +68,9 @@ MEMSCHEDULER_RABBITMQ_VIRTUAL_HOST=memos
 MEMSCHEDULER_RABBITMQ_PORT=5672
 
 # LLM API 配置（使用 SiliconFlow）
-OPENAI_API_KEY=sk-xxx
-OPENAI_API_BASE=https://api.siliconflow.cn/v1
-MOS_CHAT_MODEL=Qwen/Qwen3.5-9B
+OPENAI_API_KEY=token-abc123
+OPENAI_API_BASE=http://localhost:8000/v1
+MOS_CHAT_MODEL=/root/autodl-tmp/modelscope_cache/models/Qwen/Qwen3-4B
 
 # Embedding 配置
 MOS_EMBEDDER_API_KEY=sk-xxx
