@@ -69,8 +69,9 @@ MEMSCHEDULER_RABBITMQ_PORT=5672
 
 # LLM API 配置（使用 SiliconFlow）
 OPENAI_API_KEY=token-abc123
-OPENAI_API_BASE=http://localhost:8000/v1
+OPENAI_API_BASE=http://localhost:8765/v1
 MOS_CHAT_MODEL=/root/autodl-tmp/modelscope_cache/models/Qwen/Qwen3-4B
+Context_Length=4096
 
 # Embedding 配置
 MOS_EMBEDDER_API_KEY=sk-xxx
@@ -96,11 +97,12 @@ neo4j-admin dbms set-initial-password 12345678
 neo4j start
 ```
 
-#### 5.2 确认 Qdrant 运行
+#### 5.2 启动 Qdrant
 
 ```bash
-# 检查 Qdrant 是否在端口 6333 运行
-lsof -i :6333
+# 进入 Qdrant 目录并启动（需在 /opt/qdrant 目录下运行）
+cd /opt/qdrant
+nohup ./qdrant > qdrant.log 2>&1 &
 ```
 
 #### 5.3 安装并配置 RabbitMQ
@@ -172,8 +174,31 @@ neo4j start
 # 启动 RabbitMQ（无 systemd 环境）
 rabbitmq-server -detached
 
-# 确认 Qdrant 已运行（通常自动启动）
-pgrep -f qdrant || echo "需要手动启动 Qdrant"
+# 启动 Qdrant
+cd /opt/qdrant && nohup ./qdrant > qdrant.log 2>&1 &
+
+# 启动 vLLM
+conda activate memos
+nohup python -m vllm.entrypoints.openai.api_server --model /root/autodl-tmp/modelscope_cache/models/Qwen/Qwen3-4B --port 8765 --host 0.0.0.0 > /root/vllm.log 2>&1 &
+```
+
+### 2. 停止所有服务
+
+```bash
+# 停止 MemOS 服务
+pkill -f "uvicorn.*server_api"
+
+# 停止 vLLM 服务
+pkill -f "vllm.entrypoints"
+
+# 停止 Neo4j
+neo4j stop
+
+# 停止 RabbitMQ
+rabbitmqctl stop
+
+# 停止 Qdrant
+pkill -f "/opt/qdrant/qdrant"
 ```
 
 ### 2. 激活虚拟环境
@@ -197,8 +222,15 @@ nohup HF_ENDPOINT=https://hf-mirror.com uvicorn memos.api.server_api:app --host 
 ### 4. 验证服务状态
 
 ```bash
-# 检查端口监听
-lsof -i :8000
+# 检查所有服务端口
+lsof -i :8000    # MemOS
+lsof -i :8765    # vLLM
+lsof -i :7687    # Neo4j
+lsof -i :6333    # Qdrant
+lsof -i :5672    # RabbitMQ
+
+# 或使用 netstat/ss
+ss -tlnp | grep -E '8000|8765|7687|6333|5672'
 
 # 测试 API
 curl -X POST http://localhost:8000/product/add \
@@ -269,6 +301,9 @@ rabbitmqctl set_permissions -p memos memos ".*" ".*" ".*"
 # MemOS 日志（如使用 nohup）
 tail -f /root/PycharmProjects/MemOS/src/memos.log
 
+# vLLM 日志
+tail -f /root/vllm.log
+
 # Neo4j 日志
 tail -f /var/log/neo4j/debug.log
 
@@ -283,6 +318,7 @@ tail -f /var/log/rabbitmq/rabbit@*.log
 | 服务 | 端口 | 说明 |
 |------|------|------|
 | MemOS API | 8000 | 主服务端口 |
+| vLLM | 8765 | 本地 LLM 服务 |
 | Neo4j Bolt | 7687 | 图数据库 |
 | Neo4j HTTP | 7474 | Neo4j 浏览器 |
 | Qdrant | 6333 | 向量数据库 |
