@@ -26,7 +26,9 @@ curl -X POST "$API_URL" \
   -d "{
     \"query\": \"我喜欢什么颜色\",
     \"user_id\": \"$USER_ID\",
-    \"mem_cube_id\": \"$MEM_CUBE_ID\"
+    \"readable_cube_ids\": [\"$MEM_CUBE_ID\"],
+    \"relativity\": 0,
+    \"search_memory_type\": \"UserMemory\"
   }" | python3 -m json.tool 2>/dev/null || cat
 
 echo ""
@@ -43,7 +45,9 @@ if [ -n "$1" ]; then
       -d "{
         \"query\": \"$1\",
         \"user_id\": \"$USER_ID\",
-        \"mem_cube_id\": \"$MEM_CUBE_ID\"
+        \"readable_cube_ids\": [\"$MEM_CUBE_ID\"],
+        \"relativity\": 0,
+        \"search_memory_type\": \"UserMemory\"
       }" | python3 -m json.tool 2>/dev/null || cat
 
     echo ""
